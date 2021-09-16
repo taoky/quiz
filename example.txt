@@ -1,0 +1,28 @@
+Question
+示例问题
+A. 1
+B. 2
+C. 3
+D. 4
+Answer
+A. 因为 1 + 1 = 2
+
+Question
+示例问题 2
+A. a
+B. b
+C. c
+D. d
+Answer
+B. Hello, world!
+......
+
+Question
+示例问题 3
+A. !
+B. @
+C. #
+D. $
+Answer
+C. This question should be C.
+......
