@@ -1,19 +1,24 @@
-use pancurses::{endwin, initscr, Input, noecho};
+#[macro_use(defer)]
+extern crate scopeguard;
+
+use nix::sys::termios;
 use rand::{self, seq::SliceRandom};
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
-#[macro_use(defer)] extern crate scopeguard;
 
-fn wait_enter_refresh(window: &pancurses::Window) {
-    loop {
-        match window.getch() {
-            Some(Input::Character('\n')) => { break }
-            Some(Input::KeyEnter) => { break }
-            _ => ()
+fn refresh() {
+    print!("{esc}[2J{esc}[1;1H", esc = 27 as char);
+}
+
+fn wait_enter_refresh() {
+    for byte in std::io::stdin().bytes() {
+        let byte = byte.unwrap();
+        if byte == 10 {
+            break;
         }
     }
-    window.clear();
+    refresh();
 }
 
 fn main() {
@@ -74,16 +79,19 @@ fn main() {
         bank.push((question, answer));
     }
 
-    let window = initscr();
-    defer!(endwin(););
-    noecho();
+    let orig_term = termios::tcgetattr(0).unwrap();
+    defer!(termios::tcsetattr(0, termios::SetArg::TCSADRAIN, &orig_term).unwrap(););
+    let mut term = termios::tcgetattr(0).unwrap();
+    term.local_flags.remove(termios::LocalFlags::ICANON); // get chars immediately
+    term.local_flags.remove(termios::LocalFlags::ECHO); // noecho
+    refresh();
     loop {
         bank.shuffle(&mut rand::thread_rng());
         for (question, answer) in &bank {
-            window.printw("问题:\n".to_string() + question);
-            wait_enter_refresh(&window);
-            window.printw("答案:\n".to_string() + answer);
-            wait_enter_refresh(&window);
+            print!("问题:\n{}", question);
+            wait_enter_refresh();
+            print!("答案:\n{}", answer);
+            wait_enter_refresh();
         }
     }
 }

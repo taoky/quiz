@@ -7,5 +7,5 @@ edition = "2018"
 
 [dependencies]
 rand = "0.8.4"
-pancurses = "0.16"
+nix = "0.22.1"
 scopeguard = "1.1.0"
