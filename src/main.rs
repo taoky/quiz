@@ -1,7 +1,11 @@
 use crossterm::{
+    cursor::MoveTo,
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{
+        disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen,
+        LeaveAlternateScreen,
+    },
 };
 use rand::prelude::SliceRandom;
 use std::{
@@ -78,7 +82,12 @@ fn main() -> Result<(), io::Error> {
     // init terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(
+        stdout,
+        EnterAlternateScreen,
+        EnableMouseCapture,
+        Clear(ClearType::All)
+    )?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
@@ -88,6 +97,8 @@ fn main() -> Result<(), io::Error> {
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
+        Clear(ClearType::All),
+        MoveTo(0, 0),
         LeaveAlternateScreen,
         DisableMouseCapture
     )?;
@@ -116,11 +127,9 @@ fn run_app<B: Backend>(
                 if let Event::Key(key) = event::read()? {
                     if let KeyCode::Char('q') = key.code {
                         return Ok(());
-                    }
-                    else if let KeyCode::Char(' ') = key.code {
+                    } else if let KeyCode::Char(' ') = key.code {
                         flip = !flip;
-                    }
-                    else if let KeyCode::Enter = key.code {
+                    } else if let KeyCode::Enter = key.code {
                         break;
                     }
                 }
@@ -141,7 +150,14 @@ fn ui<B: Backend>(f: &mut Frame<B>, question: &str, answer: &str) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
-        .constraints([Constraint::Percentage(49), Constraint::Percentage(49), Constraint::Percentage(2)].as_ref())
+        .constraints(
+            [
+                Constraint::Percentage(49),
+                Constraint::Percentage(49),
+                Constraint::Percentage(2),
+            ]
+            .as_ref(),
+        )
         .split(size);
 
     let block_question = Block::default().title("Question").borders(Borders::ALL);
@@ -150,6 +166,8 @@ fn ui<B: Backend>(f: &mut Frame<B>, question: &str, answer: &str) {
     let block_answer = Block::default().title("Answer").borders(Borders::ALL);
     let paragraph_answer = Paragraph::new(answer).block(block_answer);
     f.render_widget(paragraph_answer, chunks[1]);
-    let paragraph_help = Paragraph::new("[SPACE] Show/hide answer, [ENTER] Next question, [q] Quit").block(Block::default());
+    let paragraph_help =
+        Paragraph::new("[SPACE] Show/hide answer, [ENTER] Next question, [q] Quit")
+            .block(Block::default());
     f.render_widget(paragraph_help, chunks[2]);
 }
