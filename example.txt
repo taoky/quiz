@@ -1,28 +1,41 @@
 Question
 示例问题
+===
 A. 1
 B. 2
 C. 3
 D. 4
 Answer
-A. 因为 1 + 1 = 2
+A
+因为 1 + 1 = 2
 
 Question
 示例问题 2
+===
 A. a
 B. b
 C. c
 D. d
 Answer
-B. Hello, world!
+B
+Hello, world!
 ......
 
 Question
 示例问题 3
+===
 A. !
 B. @
 C. #
 D. $
 Answer
-C. This question should be C.
+C
+This question should be C.
 ......
+
+Question
+示例问题 4
+这是一个简答题，没有固定选项的答案。
+Answer
+这是答案的第一行；
+这是答案的第二行。
