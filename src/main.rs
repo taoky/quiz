@@ -1,20 +1,27 @@
-use crossterm::{
-    cursor::MoveTo,
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
-    execute,
-    terminal::{
-        disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen,
-        LeaveAlternateScreen,
-    },
-};
+// use crossterm::{
+//     cursor::MoveTo,
+//     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
+//     execute,
+//     terminal::{
+//         disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen,
+//         LeaveAlternateScreen,
+//     },
+// };
 use rand::prelude::SliceRandom;
 use std::{
     env,
     fs::File,
     io::{self, Read},
 };
+use termion::async_stdin;
+use termion::{
+    event::{Event, Key},
+    input::{MouseTerminal},
+    raw::IntoRawMode,
+    screen::AlternateScreen,
+};
 use tui::{
-    backend::{Backend, CrosstermBackend},
+    backend::{Backend, TermionBackend},
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
@@ -152,30 +159,34 @@ fn main() -> Result<(), io::Error> {
     }
 
     // init terminal
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(
-        stdout,
-        EnterAlternateScreen,
-        EnableMouseCapture,
-        Clear(ClearType::All)
-    )?;
-    let backend = CrosstermBackend::new(stdout);
+    let stdout = io::stdout().into_raw_mode()?;
+    let stdout = MouseTerminal::from(stdout);
+    let stdout = AlternateScreen::from(stdout);
+    print!("{}", termion::clear::All);
+    // execute!(
+    //     stdout,
+    //     EnterAlternateScreen,
+    //     EnableMouseCapture,
+    //     Clear(ClearType::All)
+    // )?;
+    let backend = TermionBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
     let res = run_app(&mut terminal, &mut bank);
 
     // restroe terminal
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        Clear(ClearType::All),
-        MoveTo(0, 0),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
+    // disable_raw_mode()?;
+    // execute!(
+    //     terminal.backend_mut(),
+    //     Clear(ClearType::All),
+    //     MoveTo(0, 0),
+    //     LeaveAlternateScreen,
+    //     DisableMouseCapture
+    // )?;
+    // terminal.show_cursor()?;
 
+    print!("{}", termion::clear::All);
+    print!("{}", termion::cursor::Goto(1, 1));
     if let Err(err) = res {
         eprintln!("{:?}", err);
     }
@@ -201,37 +212,53 @@ fn run_app<B: Backend>(
     terminal: &mut Terminal<B>,
     bank: &mut Vec<(Question, Answer)>,
 ) -> io::Result<()> {
+    let mut stdin = async_stdin().bytes();
     loop {
         bank.shuffle(&mut rand::thread_rng());
 
         for (question, answer) in bank.iter() {
             let mut config = UIConfig::default();
+            let mut next = false;
             loop {
-                // let answer = if flip { answer } else { "" };
+                if next {
+                    break;
+                }
                 terminal.draw(|f| ui(f, question, answer, &config))?;
 
-                if let Event::Key(key) = event::read()? {
-                    // let code = keycode_lower(key.code);
-                    if KeyCode::Char('c') == key.code && key.modifiers == KeyModifiers::CONTROL {
-                        return Ok(());
-                    } else if let KeyCode::Char(' ') = key.code {
-                        config.flip = !config.flip;
-                        config.user = None;
-                    } else if let KeyCode::Enter = key.code {
-                        break;
-                    } else if let KeyCode::Char(c) = key.code {
-                        if !config.flip && question.options.is_some() {
-                            // If not in question options, don't change UIConfig
-                            let c = c.to_ascii_uppercase();
-                            for (option_char, _) in question.options.as_ref().unwrap() {
-                                if option_char == &c {
-                                    config.user = Some(c);
-                                    config.flip = true;
+                let b = stdin.next();
+                match b {
+                    Some(c) => {
+                        if let Event::Key(key) =
+                            termion::event::parse_event(c.unwrap(), &mut stdin).unwrap()
+                        {
+                            match key {
+                                Key::Ctrl('c') => return Ok(()),
+                                Key::Char(' ') => {
+                                    config.flip = !config.flip;
+                                    config.user = None;
+                                }
+                                Key::Char('\n') => {
+                                    next = true;
                                     break;
                                 }
+                                Key::Char(c) => {
+                                    if !config.flip && question.options.is_some() {
+                                        // If not in question options, don't change UIConfig
+                                        let c = c.to_ascii_uppercase();
+                                        for (option_char, _) in question.options.as_ref().unwrap() {
+                                            if option_char == &c {
+                                                config.user = Some(c);
+                                                config.flip = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                _ => {}
                             }
                         }
                     }
+                    None => {}
                 }
             }
         }
