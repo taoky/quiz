@@ -18,17 +18,17 @@ use tui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
-    widgets::{Block, BorderType, Borders, Paragraph},
+    widgets::{Block, BorderType, Borders, Paragraph, Wrap},
     Frame, Terminal,
 };
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 struct Question {
     description: String,
     options: Option<Vec<(char, String)>>,
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 struct Answer {
     correct_option: Option<char>,
     reason: String,
@@ -163,8 +163,8 @@ fn main() -> Result<(), io::Error> {
             panic!("State error: state machine should be at ReadAnswerReason state at the end of a question.\n
                     Expected 'Answer', found '{:?}'", state);
         }
-        if answer.reason.is_empty() {
-            panic!("Wrong format: answer's reason should not be empty.");
+        if answer.reason.is_empty() && answer.correct_option.is_none() {
+            panic!("Wrong format: a non-multiselect question answer's reason should not be empty (question = {:?}).", question);
         }
         bank.push((question, answer));
     }
@@ -360,10 +360,14 @@ fn ui<B: Backend>(f: &mut Frame<B>, question: &Question, answer: &Answer, config
         .split(size);
 
     let block_question = Block::default().title("Question").borders(Borders::ALL);
-    let paragraph_question = Paragraph::new(question_paragraph(question)).block(block_question);
+    let paragraph_question = Paragraph::new(question_paragraph(question))
+        .block(block_question)
+        .wrap(Wrap { trim: true });
     f.render_widget(paragraph_question, chunks[0]);
     let block_answer = Block::default().title("Answer").borders(Borders::ALL);
-    let paragraph_answer = Paragraph::new(answer_paragraph(answer, config)).block(block_answer);
+    let paragraph_answer = Paragraph::new(answer_paragraph(answer, config))
+        .block(block_answer)
+        .wrap(Wrap { trim: true });
     f.render_widget(paragraph_answer, chunks[1]);
     let paragraph_help =
         Paragraph::new("[SPACE] Show/hide answer, [ENTER] Next question, [Ctrl+C] Quit")
