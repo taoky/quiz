@@ -302,7 +302,7 @@ fn answer_paragraph<'a>(answer: &'a Answer, config: &'a UIConfig) -> Text<'a> {
         flip false => show instructions only
         flip true => show correct answer (and user's answer if not None)
     */
-    if config.flip == false {
+    if !config.flip {
         return match answer.correct_option {
             Some(_) => Text::raw("Type your answer!"),
             None => Text::raw("This question does not have an option. [SPACE] when ready."),
@@ -319,7 +319,7 @@ fn answer_paragraph<'a>(answer: &'a Answer, config: &'a UIConfig) -> Text<'a> {
 
             if let Some(user_option) = config.user {
                 spans.push(Span::raw(format!(" Your answer: {}. ", user_option)));
-                if correct_option.clone() == user_option {
+                if *correct_option == user_option {
                     spans.push(Span::styled("Correct!", correct_style));
                 } else {
                     spans.push(Span::styled("Wrong!", wrong_style));
@@ -363,7 +363,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, question: &Question, answer: &Answer, config
     let paragraph_question = Paragraph::new(question_paragraph(question)).block(block_question);
     f.render_widget(paragraph_question, chunks[0]);
     let block_answer = Block::default().title("Answer").borders(Borders::ALL);
-    let paragraph_answer = Paragraph::new(answer_paragraph(answer, &config)).block(block_answer);
+    let paragraph_answer = Paragraph::new(answer_paragraph(answer, config)).block(block_answer);
     f.render_widget(paragraph_answer, chunks[1]);
     let paragraph_help =
         Paragraph::new("[SPACE] Show/hide answer, [ENTER] Next question, [Ctrl+C] Quit")
