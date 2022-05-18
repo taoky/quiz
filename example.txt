@@ -1,16 +1,18 @@
 Question
 示例问题
+1 + 1 = ?
 ===
 A. 1
 B. 2
 C. 3
 D. 4
 Answer
-A
+B
 因为 1 + 1 = 2
 
 Question
 示例问题 2
+哪个字母在字符串 "acde" 中没有出现？
 ===
 A. a
 B. b
@@ -18,20 +20,22 @@ C. c
 D. d
 Answer
 B
-Hello, world!
-......
+a, c, d 都在 "acde" 中出现。
+只有 b 没有出现。
 
 Question
 示例问题 3
+Python 中用于表示注释的符号是？
 ===
-A. !
-B. @
+A. //
+B. '
 C. #
 D. $
 Answer
 C
-This question should be C.
-......
+Python 中的注释符号为井号 #，
+如以下代码：
+x = 1  # 为变量 x 赋值 1
 
 Question
 示例问题 4

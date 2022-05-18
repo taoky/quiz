@@ -22,13 +22,13 @@ use tui::{
     Frame, Terminal,
 };
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct Question {
     description: String,
     options: Option<Vec<(char, String)>>,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct Answer {
     correct_option: Option<char>,
     reason: String,
@@ -121,6 +121,24 @@ fn main() -> Result<(), io::Error> {
                     }
                 },
                 ParseStateMachine::ReadAnswerCorrectOption => {
+                    {
+                        // check if less than 27 options
+                        if question.options.as_ref().unwrap().len() > 26 {
+                            panic!("Wrong format: a question with more than 26 options");
+                        }
+                        // check if duplication
+                        let mut uniq = std::collections::HashSet::new();
+                        if !question
+                            .options
+                            .as_ref()
+                            .unwrap()
+                            .iter()
+                            .map(|x| x.0)
+                            .all(|x| uniq.insert(x))
+                        {
+                            panic!("Duplicated options in question options");
+                        }
+                    }
                     answer.correct_option = Some(q.chars().next().unwrap());
                     // Check consistency
                     let mut checked = false;
@@ -197,6 +215,24 @@ impl Default for UIConfig {
     }
 }
 
+fn question_internal_shuffle(mut question: Question, mut answer: Answer) -> (Question, Answer) {
+    let mut rng = rand::thread_rng();
+    if let Some(options) = &mut question.options {
+        options.shuffle(&mut rng);
+        let alphabet = ('A'..='Z').into_iter().collect::<Vec<char>>();
+        let correct_option = answer.correct_option.unwrap();
+        for (index, option) in options.iter_mut().enumerate() {
+            let old_option = option.0;
+            let new_option = alphabet[index];
+            if old_option == correct_option {
+                answer.correct_option = Some(new_option);
+            }
+            option.0 = new_option;
+        }
+    }
+    (question, answer)
+}
+
 fn run_app<B: Backend>(
     terminal: &mut Terminal<B>,
     bank: &mut Vec<(Question, Answer)>,
@@ -205,10 +241,10 @@ fn run_app<B: Backend>(
         bank.shuffle(&mut rand::thread_rng());
 
         for (question, answer) in bank.iter() {
+            let (question, answer) = question_internal_shuffle(question.clone(), answer.clone());
             let mut config = UIConfig::default();
             loop {
-                // let answer = if flip { answer } else { "" };
-                terminal.draw(|f| ui(f, question, answer, &config))?;
+                terminal.draw(|f| ui(f, &question, &answer, &config))?;
 
                 if let Event::Key(key) = event::read()? {
                     // let code = keycode_lower(key.code);
