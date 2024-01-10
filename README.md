@@ -1,6 +1,6 @@
 # quiz
 
-命令行下的助记卡片小工具。使用 Rust + [tui-rs](https://github.com/fdehau/tui-rs) 编写。
+命令行下的助记卡片小工具。使用 Rust + ~~[tui-rs](https://github.com/fdehau/tui-rs)~~ [ratatui](https://github.com/ratatui-org/ratatui/) 编写。
 
 ## 图例
 

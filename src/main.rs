@@ -8,18 +8,18 @@ use crossterm::{
     },
 };
 use rand::prelude::SliceRandom;
+use ratatui::{
+    backend::{Backend, CrosstermBackend},
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Modifier, Style},
+    text::{Span, Text},
+    widgets::{Block, BorderType, Borders, Paragraph, Wrap},
+    Frame, Terminal,
+};
 use std::{
     env,
     fs::File,
     io::{self, Read},
-};
-use tui::{
-    backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
-    text::{Span, Spans, Text},
-    widgets::{Block, BorderType, Borders, Paragraph, Wrap},
-    Frame, Terminal,
 };
 
 #[derive(Default, Clone, Debug)]
@@ -46,16 +46,13 @@ enum ParseStateMachine {
 fn main() -> Result<(), io::Error> {
     // read and parse file
     let args: Vec<_> = env::args().collect();
-    let filename: String;
-    match args.len() {
-        2 => {
-            filename = args[1].clone();
-        }
+    let filename: String = match args.len() {
+        2 => args[1].clone(),
         _ => {
             println!("Usage: {} [filename]", args[0]);
             return Err(io::Error::new(io::ErrorKind::Other, "No filename given"));
         }
-    }
+    };
     let mut file = match File::open(&filename) {
         Err(err) => panic!("cannot open {}: {}", filename, err),
         Ok(file) => file,
@@ -201,25 +198,17 @@ fn main() -> Result<(), io::Error> {
     Ok(())
 }
 
+#[derive(Default)]
 struct UIConfig {
     flip: bool,
     user: Option<char>,
-}
-
-impl Default for UIConfig {
-    fn default() -> Self {
-        Self {
-            flip: false,
-            user: None,
-        }
-    }
 }
 
 fn question_internal_shuffle(mut question: Question, mut answer: Answer) -> (Question, Answer) {
     let mut rng = rand::thread_rng();
     if let Some(options) = &mut question.options {
         options.shuffle(&mut rng);
-        let alphabet = ('A'..='Z').into_iter().collect::<Vec<char>>();
+        let alphabet = ('A'..='Z').collect::<Vec<char>>();
         let correct_option = answer.correct_option.unwrap();
         for (index, option) in options.iter_mut().enumerate() {
             let old_option = option.0;
@@ -277,18 +266,21 @@ fn run_app<B: Backend>(
 fn question_paragraph(question: &Question) -> Text {
     let mut res = vec![];
     for line in question.description.lines() {
-        res.push(Spans::from(line));
+        res.push(line.into());
     }
     match &question.options {
         Some(options) => {
             for option in options {
-                res.push(Spans::from(vec![
-                    Span::styled(
-                        format!("{}", option.0),
-                        Style::default().add_modifier(Modifier::BOLD),
-                    ),
-                    Span::raw(format!(".{}", option.1)),
-                ]));
+                res.push(
+                    vec![
+                        Span::styled(
+                            format!("{}", option.0),
+                            Style::default().add_modifier(Modifier::BOLD),
+                        ),
+                        Span::raw(format!(".{}", option.1)),
+                    ]
+                    .into(),
+                );
             }
         }
         None => {}
@@ -326,18 +318,18 @@ fn answer_paragraph<'a>(answer: &'a Answer, config: &'a UIConfig) -> Text<'a> {
                 }
             }
 
-            res.push(Spans::from(spans));
+            res.push(spans.into());
         }
         None => {}
     }
     for line in answer.reason.lines() {
-        res.push(Spans::from(line));
+        res.push(line.into());
     }
 
     res.into()
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, question: &Question, answer: &Answer, config: &UIConfig) {
+fn ui(f: &mut Frame, question: &Question, answer: &Answer, config: &UIConfig) {
     let size = f.size();
 
     let block = Block::default()
