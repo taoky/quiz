@@ -1,0 +1,67 @@
+name: Rust
+
+on:
+  - push
+  - pull_request
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+    - uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git
+          target
+        key: musl-cargo-${{ hashFiles('**/Cargo.toml') }}
+    - name: Enable QEMU user emulation
+      run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+    - name: Compile for amd64 and arm64
+      run: |
+        mkdir -p ~/.cargo/{git,registry}
+        # amd64
+        docker run --rm -t \
+            --mount type=bind,source=${{ github.workspace }},target=/volume \
+            --mount type=bind,source=$HOME/.cargo/registry,target=/root/.cargo/registry \
+            --mount type=bind,source=$HOME/.cargo/git,target=/root/.cargo/git \
+            --network=host \
+            clux/muslrust:stable \
+            cargo build --release
+        # arm64
+        docker run --rm -t \
+            --mount type=bind,source=${{ github.workspace }},target=/volume \
+            --mount type=bind,source=$HOME/.cargo/registry,target=/root/.cargo/registry \
+            --mount type=bind,source=$HOME/.cargo/git,target=/root/.cargo/git \
+            --network=host \
+            --platform linux/arm64 \
+            clux/muslrust:stable \
+            cargo build --release
+        
+        sudo chown -R runner ~/.cargo/
+        sudo chown -R runner target/
+        mv target/x86_64-unknown-linux-musl/release/quiz quiz-amd64
+        mv target/aarch64-unknown-linux-musl/release/quiz quiz-arm64
+
+    - name: Deploy - Create and Upload Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: |
+          quiz-amd64
+          quiz-arm64
+    - name: Deploy - Put it in artifact (if not a tag)
+      if: false == startsWith(github.ref, 'refs/tags/')
+      uses: actions/upload-artifact@v4
+      with:
+        name: quiz
+        path: |
+          quiz-amd64
+          quiz-arm64
