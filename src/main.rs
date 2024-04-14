@@ -103,13 +103,13 @@ fn main() -> Result<(), io::Error> {
                 ParseStateMachine::ReadQuestionOptions => match q {
                     "Answer" => state = ParseStateMachine::ReadAnswerCorrectOption,
                     _ => {
-                        let mut option = q.split('.');
+                        let mut option = q.splitn(2, '.');
                         let option_char = option.next().unwrap().chars().next().unwrap();
                         assert!(
                             option_char.is_uppercase(),
                             "Wrong format: question option should be uppercase!"
                         );
-                        let option_description = option.collect::<Vec<_>>().join(" ");
+                        let option_description = option.next().unwrap().to_string();
                         question
                             .options
                             .as_mut()
