@@ -222,7 +222,7 @@ fn question_internal_shuffle(mut question: Question, mut answer: Answer) -> (Que
     (question, answer)
 }
 
-fn run_app<B: Backend>(
+fn run_app<B: Backend<Error = io::Error>>(
     terminal: &mut Terminal<B>,
     bank: &mut Vec<(Question, Answer)>,
 ) -> io::Result<()> {
@@ -263,7 +263,7 @@ fn run_app<B: Backend>(
     }
 }
 
-fn question_paragraph(question: &Question) -> Text {
+fn question_paragraph(question: &Question) -> Text<'_> {
     let mut res = vec![];
     for line in question.description.lines() {
         res.push(line.into());
@@ -330,7 +330,7 @@ fn answer_paragraph<'a>(answer: &'a Answer, config: &'a UIConfig) -> Text<'a> {
 }
 
 fn ui(f: &mut Frame, question: &Question, answer: &Answer, config: &UIConfig) {
-    let size = f.size();
+    let size = f.area();
 
     let block = Block::default()
         .title("Quiz")
